@@ -1,2 +1,2 @@
 # go_training
-a repo for sharing learning Golang practicing 
+a repo for sharing  Golang learning & practicing 
