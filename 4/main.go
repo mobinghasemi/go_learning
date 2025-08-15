@@ -15,10 +15,10 @@ type AnnouncementPaper interface {
 }
 
 type Board struct {
-	rows         int
-	cols         int
-	currentTime  int
-	installation []*installation
+	rows          int
+	cols          int
+	currentTime   int
+	installations []*installation
 }
 
 type Paper struct {
@@ -35,13 +35,17 @@ type installation struct {
 	time  int
 }
 
+func (inst *installation) contains(row, col int) bool {
+	return (row >= inst.row) && (row < inst.row+inst.paper.height) && (col >= inst.col) && (col < inst.col+inst.paper.width)
+}
+
 func NewBoard(row int, col int) AnnouncementBoard {
 	return &Board{rows: row, cols: col}
 }
 
 func (b *Board) getAnnouncementIDsAt(row, col int) []int {
 	var ids []int
-	for _, installation := range b.installation {
+	for _, installation := range b.installations {
 		if installation.contains(row, col) {
 			ids = append(ids, installation.paper.id)
 		}
@@ -64,9 +68,14 @@ func (p *Paper) addTo(ab AnnouncementBoard, row, col int) error {
 		}
 		return errors.New("paper out of bound")
 	}
-	inst := &installation{paper: p, row: row, col: startCol, time: b.currentTime}
+	inst := &installation{
+		paper: p,
+		row:   row,
+		col:   startCol,
+		time:  b.currentTime,
+	}
 	b.currentTime++
-	b.installation = append(b.installation, inst)
+	b.installations = append(b.installations, inst)
 	p.board = b
 	return nil
 }
@@ -77,17 +86,17 @@ func (p *Paper) removeAndGetIDsOnTop() []int {
 	}
 	var removed *installation
 	b := p.board
-	for i, inst := range b.installation {
+	for i, inst := range b.installations {
 		if inst.paper.id == p.id {
 			removed = inst
-			b.installation = append(b.installation[:i], b.installation[i+1:]...)
+			b.installations = append(b.installations[:i], b.installations[i+1:]...)
 			break
 		}
 	}
 	if removed == nil {
 		return []int{}
 	}
-	overlapping := getInstallationOnTop(removed, b)
+	overlapping := getInstallationsOnTop(removed, b)
 	sort.SliceStable(overlapping, func(i, j int) bool {
 		return overlapping[i].time > overlapping[j].time
 	})
@@ -106,9 +115,9 @@ func (p *Paper) removeAndGetIDsOnTop() []int {
 	return ids
 }
 
-func getInstallationOnTop(base *installation, b *Board) []*installation {
+func getInstallationsOnTop(base *installation, b *Board) []*installation {
 	var result []*installation
-	for _, inst := range b.installation {
+	for _, inst := range b.installations {
 		if inst.time <= base.time {
 			continue
 		}
@@ -116,7 +125,7 @@ func getInstallationOnTop(base *installation, b *Board) []*installation {
 			continue
 		}
 		result = append(result, inst)
-		result = append(result, getInstallationOnTop(inst, b)...)
+		result = append(result, getInstallationsOnTop(inst, b)...)
 	}
 	return result
 
@@ -131,8 +140,4 @@ func isOverLapping(a, b *installation) bool {
 
 func NewPaper(width int, height int, ID int) AnnouncementPaper {
 	return &Paper{id: ID, width: width, height: height}
-}
-
-func (inst *installation) contains(row, col int) bool {
-	return (row >= inst.row) && (row < inst.row+inst.paper.height) && (col >= inst.col) && (col < inst.col+inst.paper.width)
 }
